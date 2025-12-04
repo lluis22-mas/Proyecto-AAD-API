@@ -23,15 +23,15 @@ def init_pool():
     global connection_pool
     if connection_pool is None:
         try:
-            print("🟡 Creando pool de conexiones...")
+            print("Creando pool de conexiones...")
             connection_pool = pooling.MySQLConnectionPool(
                 pool_name="sakila_pool",
                 pool_size=5,
                 **dbconfig
             )
-            print("✅ Pool de conexiones creado correctamente")
+            print("Pool de conexiones creado correctamente")
         except Error as e:
-            print(f"❌ Error creando el pool de conexiones: {e}")
+            print(f"Error creando el pool de conexiones: {e}")
             raise
 
 
