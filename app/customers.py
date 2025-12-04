@@ -11,10 +11,60 @@ router = APIRouter(
 @router.post("", response_model=Customer, status_code=201)
 def create_customer(customer: CustomerCreate):
     """
-    Crear un nuevo cliente.
-    (Implementaremos la lógica SQL en el siguiente bloque)
+    Crear un nuevo cliente en la tabla customer.
     """
-    raise HTTPException(status_code=501, detail="Not implemented yet")
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        insert_query = """
+            INSERT INTO customer (store_id, first_name, last_name, email,
+                                  address_id, active, create_date, last_update)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW());
+        """
+
+        values = (
+            customer.store_id,
+            customer.first_name,
+            customer.last_name,
+            customer.email,
+            customer.address_id,
+            customer.active,
+        )
+
+        cursor.execute(insert_query, values)
+        conn.commit()
+
+        new_id = cursor.lastrowid
+
+        # Recuperamos el registro recién creado
+        select_query = """
+            SELECT customer_id, store_id, first_name, last_name,
+                   email, address_id, active, create_date, last_update
+            FROM customer
+            WHERE customer_id = %s;
+        """
+        cursor.execute(select_query, (new_id,))
+        row = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if row is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Error al recuperar el cliente recién creado"
+            )
+
+        return Customer(**row)
+
+    except HTTPException:
+        # Reenviamos errores HTTP (por si luego añades validaciones 400, etc.)
+        raise
+    except Exception as e:
+        # Cualquier otra cosa es un 500
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("", response_model=List[Customer])
 def list_customers(
