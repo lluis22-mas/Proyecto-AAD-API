@@ -1,11 +1,14 @@
 from fastapi import FastAPI, HTTPException
 from .db import get_connection
 from .customers import router as customers_router
+from .rentals import router as rentals_router 
 
 app = FastAPI(title="Sakila API", version="1.0.0")
 
 # Registrar rutas de customers
 app.include_router(customers_router)
+# Registrar rutas de rentals
+app.include_router(rentals_router)
 
 @app.get("/health")
 def health_check():
