@@ -135,18 +135,63 @@ def list_rentals(
 ):
     """
     Listar rentals con paginación.
-    (Implementaremos la lógica SQL más adelante)
     """
-    raise HTTPException(status_code=501, detail="Not implemented yet")
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+            SELECT rental_id, inventory_id, customer_id, staff_id,
+                   rental_date, return_date, last_update
+            FROM rental
+            ORDER BY rental_date DESC, rental_id DESC
+            LIMIT %s OFFSET %s;
+        """
+        cursor.execute(query, (limit, offset))
+        rows = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        rentals = [Rental(**row) for row in rows]
+        return rentals
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{rental_id}", response_model=Rental)
 def get_rental(rental_id: int):
     """
     Obtener detalle de un rental por ID.
-    (Lógica a implementar más adelante)
     """
-    raise HTTPException(status_code=501, detail="Not implemented yet")
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+            SELECT rental_id, inventory_id, customer_id, staff_id,
+                   rental_date, return_date, last_update
+            FROM rental
+            WHERE rental_id = %s;
+        """
+        cursor.execute(query, (rental_id,))
+        row = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if row is None:
+            raise HTTPException(status_code=404, detail="Rental not found")
+
+        return Rental(**row)
+
+    except HTTPException:
+        # reenviamos 404 tal cual
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @router.put("/{rental_id}/return", response_model=Rental)
