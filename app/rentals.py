@@ -267,7 +267,44 @@ def list_rentals_by_customer(
     offset: int = Query(0, ge=0),
 ):
     """
-    Listar todos los rentals de un cliente.
-    (Lógica a implementar más adelante)
+    Listar todos los rentals asociados a un cliente.
     """
-    raise HTTPException(status_code=501, detail="Not implemented yet")
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # 1) Comprobar que el cliente existe
+        cursor.execute(
+            "SELECT customer_id FROM customer WHERE customer_id = %s;",
+            (customer_id,),
+        )
+        exists = cursor.fetchone()
+
+        if exists is None:
+            cursor.close()
+            conn.close()
+            raise HTTPException(status_code=404, detail="Customer not found")
+
+        # 2) Obtener los rentals del cliente
+        query = """
+            SELECT rental_id, inventory_id, customer_id, staff_id,
+                   rental_date, return_date, last_update
+            FROM rental
+            WHERE customer_id = %s
+            ORDER BY rental_date DESC, rental_id DESC
+            LIMIT %s OFFSET %s;
+        """
+        cursor.execute(query, (customer_id, limit, offset))
+        rows = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        rentals = [Rental(**row) for row in rows]
+        return rentals
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
