@@ -198,9 +198,66 @@ def get_rental(rental_id: int):
 def return_rental(rental_id: int):
     """
     Marcar un rental como devuelto (set return_date = NOW()).
-    (Lógica a implementar más adelante)
     """
-    raise HTTPException(status_code=501, detail="Not implemented yet")
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # 1) Comprobar que existe
+        cursor.execute(
+            """
+            SELECT rental_id, return_date
+            FROM rental
+            WHERE rental_id = %s;
+            """,
+            (rental_id,),
+        )
+        rental = cursor.fetchone()
+
+        if rental is None:
+            cursor.close()
+            conn.close()
+            raise HTTPException(status_code=404, detail="Rental not found")
+
+        # 2) Comprobar que NO está devuelto
+        if rental["return_date"] is not None:
+            cursor.close()
+            conn.close()
+            raise HTTPException(status_code=400, detail="Rental already returned")
+
+        # 3) Marcar como devuelto
+        cursor.execute(
+            """
+            UPDATE rental
+            SET return_date = NOW(), last_update = NOW()
+            WHERE rental_id = %s;
+            """,
+            (rental_id,),
+        )
+        conn.commit()
+
+        # 4) Recuperar rental actualizado
+        cursor.execute(
+            """
+            SELECT rental_id, inventory_id, customer_id, staff_id,
+                   rental_date, return_date, last_update
+            FROM rental
+            WHERE rental_id = %s;
+            """,
+            (rental_id,),
+        )
+        updated = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        return Rental(**updated)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @router.get("/customer/{customer_id}", response_model=List[Rental])
